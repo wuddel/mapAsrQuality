@@ -1,0 +1,269 @@
+---
+title: "asrQualityMapShiny"
+runtime: shiny
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This R Markdown document is made interactive using Shiny. Unlike the more traditional workflow of creating static reports, you can now create documents that allow your readers to change the assumptions underlying your analysis and see the results immediately. 
+
+To learn more, see [Interactive Documents](http://rmarkdown.rstudio.com/authoring_shiny.html).
+
+## Inputs and Outputs
+
+You can embed Shiny inputs and outputs in your document. Outputs are automatically updated whenever inputs change.  This demonstrates how a standard R plot can be made interactive by wrapping it in the Shiny `renderPlot` function. The `selectInput` and `sliderInput` functions create the input widgets used to drive the plot.
+
+```{r libraries, echo=FALSE}
+library(shiny)
+library(leaflet)
+library(car)
+#library(ggplot2)
+```
+
+Data
+
+```{r data, echo=FALSE}
+cities <- read.csv(textConnection("
+SE_Kennung,Aufnahme_Ort,Geschlecht,Mundart-Ort,S_Kennung,asrQuality,Long,Lat,WER_Model_1_0_2,WER_Model_1_0_62,WER_Model_1_0_2_CI,WER_Model_1_0_62_CI
+PF--_E_00001_SE_01,Braunschweig,Weiblich,Braunschweig,PF--_S_00001,93,10.46,52.27,12.48,11.72,10.88,10.56
+PF--_E_00002_SE_01,Braunschweig,Männlich,Braunschweig,PF--_S_00002,90,10.46,52.27,23.97,23.08,23.03,22.24
+PF--_E_00009_SE_01,Lübeck,Weiblich,Lübeck,PF--_S_00009,90,10.62,53.88,22.63,20.38,19.85,17.89
+PF--_E_00010_SE_01,Lübeck,Weiblich,Lübeck,PF--_S_00010,91,10.62,53.88,17.68,14.76,15.91,13.60
+PF--_E_00014_SE_01,Bremen,Männlich,Bremen,PF--_S_00014,89,8.6,53.12,29.87,28.62,28.46,26.81
+PF--_E_00015_SE_01,Bremen,Weiblich,Bremen,PF--_S_00015,93,8.6,53.12,15.29,16.08,13.17,14.10
+PF--_E_00018_SE_01,Hamburg,Männlich,Hamburg,PF--_S_00018,95,9.65,53.56,9.94,10.30,8.37,8.80
+PF--_E_00019_SE_01,Hamburg,Weiblich,Hamburg,PF--_S_00019,94,9.65,53.56,13.59,12.70,11.53,11.05
+PF--_E_00026_SE_01,Emden,Weiblich,Bernburg an der Saale,PF--_S_00026,91,11.72,51.8,28.90,26.44,27.75,25.34
+PF--_E_00027_SE_01,Emden,Männlich,Emden,PF--_S_00027,85,7.17,53.36,44.51,44.47,43.77,43.81
+PF--_E_00031_SE_01,Paderborn,Weiblich,Paderborn,PF--_S_00031,94,8.72,51.72,12.89,12.56,10.66,10.33
+PF--_E_00032_SE_01,Paderborn,Männlich,Lichtenau,PF--_S_00032,94,8.86,51.62,13.72,13.66,12.29,12.35
+PF--_E_00039_SE_01,Münster,Weiblich,Münster,PF--_S_00039,92,7.48,51.95,19.54,17.70,18.05,16.61
+PF--_E_00042_SE_01,Münster,Männlich,Warendorf - Münster,PF--_S_00042,83,7.84,51.95,45.81,44.61,45.21,44.17
+PF--_E_00051_SE_01,Bochum,Männlich,Bochum,PF--_S_00051,90,7.16,51.47,26.14,26.26,25.55,25.97
+PF--_E_00054_SE_01,Bochum,Weiblich,Bochum,PF--_S_00054,92,7.16,51.47,19.09,17.16,17.66,16.01
+PF--_E_00059_SE_01,Witten,Männlich,Witten an der Ruhr,PF--_S_00059,92,7.26,51.43,18.87,17.13,17.76,16.43
+PF--_E_00060_SE_01,Witten,Weiblich,Witten an der Ruhr,PF--_S_00060,92,7.26,51.43,15.26,13.76,14.21,12.87
+PF--_E_00063_SE_01,Mönchengladbach,Männlich,Mönchengladbach,PF--_S_00063,89,6.34,51.17,23.02,19.90,21.67,18.77
+PF--_E_00064_SE_01,Mönchengladbach,Weiblich,Mönchengladbach,PF--_S_00064,91,6.34,51.17,18.72,18.79,17.66,17.51
+PF--_E_00068_SE_01,Grevenbroich,Männlich,Grevenbroich,PF--_S_00068,90,6.55,51.09,20.24,17.80,18.57,16.37
+PF--_E_00070_SE_01,Grevenbroich,Weiblich,Grevenbroich,PF--_S_00070,90,6.55,51.09,23.50,20.98,21.93,19.53
+PF--_E_00075_SE_01,Aachen,Weiblich,Aachen,PF--_S_00075,84,6.03,50.75,46.64,46.45,44.91,44.75
+PF--_E_00076_SE_01,Aachen,Männlich,Aachen,PF--_S_00076,94,6.03,50.75,11.25,10.69,8.55,8.36
+PF--_E_00085_SE_01,Trier,Männlich,Trier,PF--_S_00085,94,6.58,49.78,12.99,14.00,12.21,13.23
+PF--_E_00087_SE_01,Trier,Weiblich,Nicht dokumentiert,PF--_S_00087,92,6.58,49.78,23.99,22.41,21.18,19.65
+PF--_E_00090_SE_01,Kaiserslautern,Weiblich,Kaiserslautern,PF--_S_00090,93,7.68,49.43,20.50,19.04,19.42,17.90
+PF--_E_00091_SE_01,Kaiserslautern,Männlich,Kaiserslautern,PF--_S_00091,92,7.68,49.43,26.64,20.26,25.77,19.27
+PF--_E_00093_SE_01,Saarbrücken,Männlich,Saarbrücken,PF--_S_00093,86,6.91,49.24,35.51,35.15,34.84,34.66
+PF--_E_00095_SE_01,Saarbrücken,Weiblich,Saarbrücken,PF--_S_00095,81,6.91,49.24,55.91,57.44,54.85,56.53
+PF--_E_00097_SE_01,Worms,Männlich,Worms,PF--_S_00097,79,8.27,49.66,58.10,56.64,57.34,56.32
+PF--_E_00098_SE_01,Worms,Weiblich,Worms,PF--_S_00098,81,8.27,49.66,52.76,53.62,52.11,53.01
+PF--_E_00101_SE_01,Heidelberg,Männlich,Heidelberg,PF--_S_00101,88,8.61,49.41,35.59,32.97,33.93,31.12
+PF--_E_00102_SE_01,Heidelberg,Weiblich,Heidelberg,PF--_S_00102,89,8.61,49.41,36.82,36.87,35.20,34.74
+PF--_E_00109_SE_01,Karlsruhe,Weiblich,Karlsruhe,PF--_S_00109,94,8.34,49.02,16.92,16.45,15.40,14.58
+PF--_E_00112_SE_01,Karlsruhe,Männlich,Karlsruhe,PF--_S_00112,92,8.34,49.02,19.74,19.12,18.14,17.89
+PF--_E_00116_SE_01,Mannheim,Männlich,Mannheim,PF--_S_00116,87,8.43,49.5,35.01,34.52,34.22,33.68
+PF--_E_00120_SE_01,Mannheim,Weiblich,Mannheim,PF--_S_00121,92,8.43,49.5,19.78,19.45,18.28,18.02
+PF--_E_00123_SE_01,Freiburg im Breisgau,Weiblich,Freiburg im Breisgau,PF--_S_00125,87,7.73,47.99,32.56,32.68,31.29,31.52
+PF--_E_00127_SE_01,Freiburg im Breisgau,Männlich,Freiburg im Breisgau,PF--_S_00129,93,7.73,47.99,18.03,18.35,17.03,17.61
+PF--_E_00131_SE_01,Tübingen,Männlich,Tübingen,PF--_S_00133,89,8.98,48.52,26.42,25.99,25.50,25.20
+PF--_E_00132_SE_01,Tübingen,Weiblich,Tübingen,PF--_S_00134,86,8.98,48.52,35.99,37.43,34.20,36.13
+PF--_E_00137_SE_01,Stuttgart,Männlich,Stuttgart,PF--_S_00139,85,9.11,48.78,40.86,39.89,40.04,39.07
+PF--_E_00145_SE_01,Stuttgart,Weiblich,Stuttgart,PF--_S_00147,85,9.11,48.78,39.69,41.31,38.25,40.19
+PF--_E_00147_SE_01,Augsburg,Weiblich,Augsburg,PF--_S_00149,82,10.79,48.36,58.14,59.81,55.85,57.57
+PF--_E_00149_SE_01,Augsburg,Männlich,Augsburg,PF--_S_00151,86,10.79,48.36,32.72,27.38,31.92,26.40
+PF--_E_00154_SE_01,München,Weiblich,München,PF--_S_00156,89,11.47,48.16,35.47,33.40,34.83,32.46
+PF--_E_00155_SE_01,München,Männlich,München,PF--_S_00157,89,11.47,48.16,26.73,26.32,25.64,25.32
+PF--_E_00166_SE_01,Passau,Weiblich,Passau,PF--_S_00168,87,13.37,48.78,37.96,35.05,36.35,33.70
+PF--_E_00167_SE_01,Passau,Männlich,Passau,PF--_S_00169,85,13.37,48.78,40.65,39.29,39.78,38.58
+PF--_E_00169_SE_01,Regensburg,Männlich,Regensburg,PF--_S_00171,88,12.04,49.02,34.03,33.12,33.47,32.43
+PF--_E_00170_SE_01,Regensburg,Weiblich,Nicht dokumentiert,PF--_S_00172,92,12.04,49.02,19.46,17.14,18.30,16.23
+PF--_E_00174_SE_01,Erlangen,Männlich,Erlangen,PF--_S_00176,90,10.91,49.59,24.75,24.65,23.76,23.76
+PF--_E_00176_SE_01,Erlangen,Weiblich,Erlangen,PF--_S_00178,88,10.91,49.59,36.33,35.86,35.09,34.56
+PF--_E_00180_SE_01,Nürnberg,Männlich,Nürnberg,PF--_S_00182,83,10.99,49.44,51.13,50.71,50.14,49.91
+PF--_E_00181_SE_01,Nürnberg,Weiblich,Nürnberg,PF--_S_00183,86,10.99,49.44,42.49,42.70,41.76,42.18
+PF--_E_00186_SE_01,Würzburg,Weiblich,Würzburg,PF--_S_00188,92,9.87,49.78,18.06,14.63,16.38,13.00
+PF--_E_00187_SE_01,Würzburg,Männlich,Würzburg,PF--_S_00189,93,9.87,49.78,17.12,15.34,15.91,14.35
+PF--_E_00193_SE_01,Gießen,Weiblich,Gießen,PF--_S_00195,91,8.59,50.58,22.19,19.74,21.09,18.95
+PF--_E_00194_SE_01,Gießen,Männlich,Gießen,PF--_S_00196,94,8.59,50.58,16.09,14.86,13.73,12.70
+PF--_E_00204_SE_01,Göttingen,Männlich,Nicht dokumentiert,PF--_S_00206,93,9.86,51.54,20.83,20.61,19.94,19.57
+PF--_E_00210_SE_01,Göttingen,Weiblich,Göttingen,PF--_S_00212,93,9.86,51.54,16.43,15.02,15.55,14.20
+PF--_E_00211_SE_01,Hannover,Männlich,Hannover,PF--_S_00213,94,9.69,52.38,11.33,11.72,9.99,10.69
+PF--_E_00212_SE_01,Hannover,Weiblich,Hannover,PF--_S_00214,91,9.69,52.38,21.71,21.10,20.12,19.94
+PF--_E_00223_SE_01,Frankfurt am Main,Männlich,Frankfurt am Main,PF--_S_00225,92,8.5,50.12,15.76,13.52,14.93,12.81
+PF--_E_00226_SE_01,Frankfurt am Main,Weiblich,Frankfurt am Main,PF--_S_00228,92,8.5,50.12,19.29,16.48,17.21,14.91
+PF--_E_00229_SE_01,Bonn,Weiblich,Bonn,PF--_S_00231,92,7.05,50.7,20.36,18.50,18.43,16.36
+PF--_E_00232_SE_01,Bonn,Männlich,Bonn,PF--_S_00234,93,7.05,50.7,15.52,16.22,14.29,15.37
+PF--_E_00243_SE_01,Kassel,Weiblich,Kassel,PF--_S_00245,89,9.39,51.32,36.24,30.73,34.58,28.78
+PF--_E_00245_SE_01,Kassel,Männlich,Wintersgrün,PF--_S_00247,89,9.39,51.32,27.17,26.96,25.52,25.79
+PF--_E_00247_SE_01,Dortmund,Männlich,Dortmund,PF--_S_00249,89,7.4,51.51,32.36,29.55,31.02,28.21
+PF--_E_00250_SE_01,Dortmund,Weiblich,Dortmund,PF--_S_00252,89,7.4,51.51,27.44,23.88,25.63,22.18
+PF--_E_00255_SE_01,Itzehoe,Männlich,Itzehoe,PF--_S_00257,92,9.49,53.93,20.65,21.54,19.59,20.76
+PF--_E_00258_SE_01,Itzehoe,Weiblich,Itzehoe,PF--_S_00260,92,9.49,53.93,26.79,28.02,25.56,26.49
+PF--_E_00263_SE_01,Leipzig,Weiblich,Leipzig,PF--_S_00265,84,12.25,51.34,49.70,45.50,48.62,44.78
+PF--_E_00265_SE_01,Leipzig,Männlich,Leipzig,PF--_S_00267,92,12.25,51.34,21.66,20.85,21.04,20.35
+PF--_E_00271_SE_01,Dresden,Männlich,Dresden,PF--_S_00273,88,13.63,51.08,35.70,33.48,34.74,32.59
+PF--_E_00273_SE_01,Dresden,Weiblich,Dresden,PF--_S_00275,93,13.63,51.08,16.09,15.45,14.75,14.32
+PF--_E_00280_SE_01,Plauen,Männlich,Plauen,PF--_S_00282,89,12.07,50.5,26.92,26.03,26.03,25.03
+PF--_E_00282_SE_01,Plauen,Weiblich,Plauen,PF--_S_00284,80,12.07,50.5,54.03,53.07,52.94,52.17
+PF--_E_00288_SE_01,Magdeburg,Weiblich,Magdeburg,PF--_S_00290,93,11.5,52.13,21.27,21.50,20.09,20.33
+PF--_E_00290_SE_01,Magdeburg,Männlich,Magdeburg,PF--_S_00292,91,11.5,52.13,20.50,20.35,18.60,18.45
+PF--_E_00296_SE_01,Cottbus,Weiblich,Cottbus,PF--_S_00298,90,14.32,51.78,53.43,51.45,52.26,49.83
+PF--_E_00297_SE_01,Cottbus,Männlich,Cottbus,PF--_S_00299,84,14.32,51.78,54.78,58.58,53.90,57.70
+PF--_E_00305_SE_01,Wittenberg,Weiblich,Wittenberg,PF--_S_00307,86,12.54,51.91,32.43,28.78,31.73,28.16
+PF--_E_00306_SE_01,Wittenberg,Männlich,Wittenberg,PF--_S_00308,91,12.54,51.91,19.00,20.73,17.73,19.82
+PF--_E_00313_SE_01,Greifswald,Männlich,Greifswald,PF--_S_00315,89,13.34,54.12,22.46,20.02,21.34,19.31
+PF--_E_00314_SE_01,Greifswald,Weiblich,Greifswald,PF--_S_00316,88,13.34,54.12,32.41,29.92,30.87,28.33
+PF--_E_00323_SE_01,Berlin,Weiblich,Berlin,PF--_S_00325,94,13.29,52.51,14.07,13.64,12.36,12.11
+PF--_E_00324_SE_01,Berlin,Männlich,Berlin,PF--_S_00326,95,13.29,52.51,12.09,12.00,10.92,11.10
+PF--_E_00335_SE_01,Rostock,Weiblich,Rostock,PF--_S_00337,83,12.01,54.15,40.00,40.00,39.38,39.19
+PF--_E_00340_SE_01,Rostock,Männlich,Rostock,PF--_S_00342,87,12.01,54.15,34.03,32.02,32.46,30.01
+PF--_E_00341_SE_01,Weimar,Weiblich,Weimar,PF--_S_00343,90,11.25,50.98,26.49,25.84,24.78,24.12
+PF--_E_00342_SE_01,Weimar,Männlich,Weimar,PF--_S_00344,92,11.25,50.98,17.79,20.02,17.56,19.35
+PF--_E_00350_SE_01,Wien,Männlich,Wien,PF--_S_00352,84,16.31,48.22,41.55,40.44,41.15,39.83
+PF--_E_00355_SE_01,Wien,Weiblich,Wien,PF--_S_00357,77,16.31,48.22,70.49,72.95,69.91,72.38
+PF--_E_00359_SE_01,Linz an der Donau,Weiblich,Wels,PF--_S_00361,79,13.86,48.2,57.06,60.47,55.90,59.14
+PF--_E_00362_SE_01,Linz an der Donau,Männlich,Linz an der Donau,PF--_S_00364,82,14.26,48.3,47.84,47.69,47.09,47.09
+PF--_E_00364_SE_01,Salzburg,Weiblich,Salzburg,PF--_S_00366,85,13.02,47.8,30.07,31.80,29.39,30.74
+PF--_E_00365_SE_01,Salzburg,Männlich,Salzburg,PF--_S_00367,88,13.02,47.8,33.96,32.74,33.68,32.08
+PF--_E_00369_SE_01,Klagenfurt,Weiblich,Seeboden - Klagenfurt,PF--_S_00371,87,13.59,46.9,36.91,35.45,35.63,34.25
+PF--_E_00373_SE_01,Klagenfurt,Männlich,Klagenfurt,PF--_S_00375,94,14.24,46.64,9.98,9.68,9.00,8.85
+PF--_E_00374_SE_01,Graz,Weiblich,Köflach - Graz,PF--_S_00376,87,15.37,47.07,37.15,39.76,35.82,38.73
+PF--_E_00375_SE_01,Graz,Männlich,Graz,PF--_S_00377,90,15.37,47.07,29.47,29.32,28.80,28.80
+PF--_E_00383_SE_01,Innsbruck,Weiblich,Innsbruck,PF--_S_00385,82,11.31,47.29,48.58,50.56,47.92,50.03
+PF--_E_00384_SE_01,Innsbruck,Männlich,Innsbruck,PF--_S_00386,83,11.31,47.29,45.86,48.62,44.66,47.35
+PF--_E_00386_SE_01,Bern,Weiblich,Köniz,PF--_S_00391,85,7.37,46.9,38.26,37.18,37.00,36.10
+PF--_E_00388_SE_01,Bern,Männlich,Bern,PF--_S_00393,88,7.36,46.96,82.38,83.50,82.03,83.22
+PF--_E_00391_SE_01,Zürich,Männlich,Zürich,PF--_S_00396,84,8.47,47.38,35.94,38.12,35.23,37.55
+PF--_E_00393_SE_01,Zürich,Weiblich,Männedorf,PF--_S_00398,91,8.68,47.25,26.38,25.56,25.77,25.15
+PF--_E_00395_SE_01,Basel,Weiblich,Basel,PF--_S_00400,82,7.56,47.56,54.60,53.94,54.32,53.75
+PF--_E_00397_SE_01,Basel,Männlich,Basel,PF--_S_00402,89,7.56,47.56,25.61,26.67,24.62,25.68
+"))
+```
+
+<!-- ```{r eruptions, echo=FALSE}
+####### Scatterplot and added regression line
+#plot(cities$WER, cities$asrQuality, main = "",
+#     xlab = "WER", ylab = "asrQuality",
+#     pch = 19, frame = FALSE)
+#     abline(lm(cities$asrQuality ~ cities$WER, data = cities), col = "blue")
+
+#library("ggpubr")
+#ggscatter(cities, x = "WER_Model_1_0_2", y = "asrQuality", 
+#          add = "reg.line", conf.int = TRUE, 
+#          cor.coef = FALSE, cor.method = "pearson",
+#          xlab = "WER", ylab = "asrQuality")
+```
+-->
+
+Mean ASR-Quality
+
+```{r meanasr, echo=FALSE}
+mean(cities$asrQuality) #
+```
+
+```{r narmalitytest, echo=FALSE}
+shapiro.test(cities$asrQuality) # Shapiro Wilk test of normality
+shapiro.test(cities$WER_Model_1_0_2)
+x<-cities$asrQuality
+y<-cities$WER_Model_1_0_2
+```
+
+Spearman Correllation Test
+
+```{r corrtest, echo=FALSE}
+cor.test(x,y,method="spearman")
+#library("car") for making scatterplots
+```
+
+Scatterplot
+
+```{r scatterplot, echo=FALSE}
+scatterplot(asrQuality ~ WER_Model_1_0_2, data = cities,
+            xlab = "WER", ylab = "asrQuality")
+``` 
+
+
+
+```{r groups, echo=FALSE}
+groups = as.character(unique(cities$Geschlecht))
+
+#define the color of asr quality
+ pal <- colorNumeric(
+    palette = c('yellow', 'blue'),
+    domain = cities$WER
+  )
+
+ui <- fluidPage(
+  leafletOutput("mymap"),
+  p()
+)
+```
+
+Starting the server for the App
+
+```{r server, echo=FALSE}
+server <- function(input, output, session) {
+
+  output$mymap <- renderLeaflet({
+    map = leaflet(cities) %>% addProviderTiles(providers$Esri.WorldGrayCanvas) %>%
+      setView(lng = 13, lat = 50, zoom = 5) %>% 
+      addCircleMarkers(lng = subset(cities, Geschlecht=='Weiblich')$Long, 
+             lat = subset(cities, Geschlecht=='Weiblich')$Lat, 
+             weight = 10,
+             color = ~pal(subset(cities, Geschlecht=='Weiblich')$WER_Model_1_0_2),
+             radius = 2, 
+             popup = ~subset(cities, Geschlecht=='Weiblich')$Mundart_Ort, 
+             opacity = 0.5,
+             stroke = TRUE,
+             group = "Weiblich") %>%
+      addCircleMarkers(lng = subset(cities, Geschlecht=='Männlich')$Long, 
+             lat = subset(cities, Geschlecht=='Männlich')$Lat, 
+             weight = 10, 
+             color = ~pal(subset(cities, Geschlecht=='Männlich')$WER_Model_1_0_2),
+             radius = 2, 
+             popup = ~subset(cities, Geschlecht=='Männlich')$Mundart_Ort, 
+             opacity = 0.5,
+             stroke = TRUE,
+             group = "Männlich") %>%
+      addLegend(pal = pal, values = ~WER_Model_1_0_2, bins = 7, group = "circles", position = "bottomleft")
+      options = list(
+        width = "100%", height = 750
+      )
+    #map$width <- 1000
+    #map$height <- "100%"
+    #width = 500
+    #height = 500
+ 
+    map %>% addLayersControl(overlayGroups = cities$Geschlecht)
+
+  })
+  
+}
+
+shinyApp(ui, server)
+```
+
+<!-- ## Embedded Application -->
+
+<!-- It's also possible to embed an entire Shiny application within an R Markdown document using the `shinyAppDir` function. This example embeds a Shiny application located in another directory: -->
+
+<!-- ```{r tabsets, echo=FALSE} -->
+<!-- shinyAppDir( -->
+<!--   system.file("examples/06_tabsets", package = "shiny"), -->
+<!--   options = list( -->
+<!--     width = "100%", height = 550 -->
+<!--   ) -->
+<!-- ) -->
+<!-- ``` -->
+
+<!-- Note the use of the `height` parameter to determine how much vertical space the embedded application should occupy. -->
+
+<!-- You can also use the `shinyApp` function to define an application inline rather then in an external directory. -->
+
+<!-- In all of R code chunks above the `echo = FALSE` attribute is used. This is to prevent the R code within the chunk from rendering in the document alongside the Shiny components. -->
+
+
+
